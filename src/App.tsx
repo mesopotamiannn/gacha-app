@@ -6,6 +6,7 @@ import NewsScreen from './screens/NewsScreen';
 import ContactScreen from './screens/ContactScreen';
 import { NEWS } from './data/news';
 import { GameProvider, useGame } from './context/GameContext';
+import { LazyImage } from './components/LazyImage';
 import type { Card } from './types';
 
 // --- TYPES ---
@@ -19,7 +20,12 @@ import type { Card } from './types';
 
 const AssetImg: React.FC<React.ImgHTMLAttributes<HTMLImageElement>> = (props) => {
   const { resolveAsset } = useGame();
-  return <img {...props} src={props.src ? resolveAsset(props.src) : props.src} />;
+  return <LazyImage
+    {...props}
+    src={props.src ? resolveAsset(props.src) : ''}
+    alt={props.alt || ''}
+    className={props.className}
+  />;
 };
 
 // --- STYLES ---
