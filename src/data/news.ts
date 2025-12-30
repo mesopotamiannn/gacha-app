@@ -12,7 +12,7 @@ export interface NewsItem {
 export const NEWS: NewsItem[] = [
     {
         id: 'n1',
-        date: '2025.12.29',
+        date: '2025.12.30',
         title: 'サービス開始',
         category: 'info',
         content: 'ブラウザ上でデジタルカードを楽しめるFG 2025 UNOFFICIAL COLLECTIONを公開しました。'
