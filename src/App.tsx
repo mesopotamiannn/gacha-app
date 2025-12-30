@@ -2082,26 +2082,73 @@ const MyPageScreen: React.FC = () => {
   );
 };
 
+const LoadingOverlay: React.FC = () => {
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 9999,
+      background: '#0f172a',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: 'white'
+    }}>
+      <div style={{
+        width: 40,
+        height: 40,
+        border: '4px solid #334155',
+        borderTopColor: '#3b82f6',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite'
+      }} />
+      <div style={{ marginTop: '1rem', fontWeight: 'bold', letterSpacing: '0.05em' }}>
+        LOADING...
+      </div>
+      <style>
+        {`
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+                `}
+      </style>
+    </div>
+  );
+}
+
 // --- APP ---
+const AppContent: React.FC = () => {
+  const { dataLoaded } = useGame();
+
+  if (!dataLoaded) {
+    return <LoadingOverlay />;
+  }
+
+  return (
+    <BrowserRouter>
+      <div style={styles.appContainer}>
+        <Header />
+        <div style={styles.content}>
+          <Routes>
+            <Route path="/" element={<HomeScreen />} />
+            <Route path="/scout" element={<ScoutScreen />} />
+            <Route path="/collection" element={<MyPageScreen />} />
+            <Route path="/menu" element={<MenuScreen />} />
+            <Route path="/news" element={<NewsScreen />} />
+            <Route path="/contact" element={<ContactScreen />} />
+          </Routes>
+        </div>
+        <BottomNav />
+      </div>
+    </BrowserRouter>
+  );
+};
+
 function App() {
   return (
     <GameProvider>
-      <BrowserRouter>
-        <div style={styles.appContainer}>
-          <Header />
-          <div style={styles.content}>
-            <Routes>
-              <Route path="/" element={<HomeScreen />} />
-              <Route path="/scout" element={<ScoutScreen />} />
-              <Route path="/collection" element={<MyPageScreen />} />
-              <Route path="/menu" element={<MenuScreen />} />
-              <Route path="/news" element={<NewsScreen />} />
-              <Route path="/contact" element={<ContactScreen />} />
-            </Routes>
-          </div>
-          <BottomNav />
-        </div>
-      </BrowserRouter>
+      <AppContent />
     </GameProvider>
   );
 }

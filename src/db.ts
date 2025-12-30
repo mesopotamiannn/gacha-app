@@ -19,18 +19,40 @@ export class GachaDatabase extends Dexie {
         });
     }
 
-    // Seeding Logic
-    async seed(cardsData: Card[], scoutsData: Scout[]) {
+    // 1. Sync Data (Critical for UI)
+    async seedData(cardsData: Card[], scoutsData: Scout[]) {
         const isDev = import.meta.env.DEV;
-        if (isDev) console.log("Seeding/Syncing database...");
+        if (isDev) console.log("Seeding data...");
 
-        // 1. Sync Cards (Upsert)
+        // Bulk Upsert checks
         await this.cards.bulkPut(cardsData);
-
-        // 2. Sync Scouts (Upsert)
         await this.scouts.bulkPut(scoutsData);
 
-        // 3. Sync Images (Assets)
+        // Cleanup Stale Data
+        // Cards
+        const codeCardIds = new Set(cardsData.map(c => c.id));
+        const dbCardIds = await this.cards.toCollection().primaryKeys();
+        const cardsToDelete = dbCardIds.filter(id => !codeCardIds.has(id));
+        if (cardsToDelete.length > 0) {
+            await this.cards.bulkDelete(cardsToDelete);
+        }
+
+        // Scouts
+        const codeScoutIds = new Set(scoutsData.map(s => s.id));
+        const dbScoutIds = await this.scouts.toCollection().primaryKeys();
+        const scoutsToDelete = dbScoutIds.filter(id => !codeScoutIds.has(id));
+        if (scoutsToDelete.length > 0) {
+            await this.scouts.bulkDelete(scoutsToDelete);
+        }
+
+        if (isDev) console.log("Data seeding complete.");
+    }
+
+    // 2. Sync Assets (Background)
+    async seedAssets(cardsData: Card[], scoutsData: Scout[]) {
+        const isDev = import.meta.env.DEV;
+        if (isDev) console.log("Background syncing assets...");
+
         const imageUrls = new Set<string>();
         cardsData.forEach(c => {
             if (c.imageUrl) imageUrls.add(c.imageUrl);
@@ -40,49 +62,30 @@ export class GachaDatabase extends Dexie {
             if (s.bannerImageHome) imageUrls.add(s.bannerImageHome);
         });
 
-        // Fetch and store blobs ONLY if missing
         const existingAssets = new Set(await this.assets.toCollection().primaryKeys());
+        const urlsToFetch = Array.from(imageUrls).filter(url => !existingAssets.has(url));
 
-        for (const url of imageUrls) {
-            if (existingAssets.has(url)) {
-                continue;
-            }
-
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`Failed to fetch ${url}`);
-                const blob = await response.blob();
-                await this.assets.put({
-                    id: url,
-                    blob: blob,
-                    mimeType: blob.type
-                });
-                if (isDev) console.log(`Cached missing asset: ${url}`);
-            } catch (err) {
-                console.error(`Failed to cache asset ${url}:`, err);
-            }
+        // Process in batches to avoid network congestion
+        const BATCH_SIZE = 5;
+        for (let i = 0; i < urlsToFetch.length; i += BATCH_SIZE) {
+            const batch = urlsToFetch.slice(i, i + BATCH_SIZE);
+            await Promise.all(batch.map(async (url) => {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`Failed to fetch ${url}`);
+                    const blob = await response.blob();
+                    await this.assets.put({
+                        id: url,
+                        blob: blob,
+                        mimeType: blob.type
+                    });
+                } catch (err) {
+                    console.error(`Failed to cache asset ${url}:`, err);
+                }
+            }));
         }
 
-        // 4. Cleanup Stale Data
-        // Cards
-        const codeCardIds = new Set(cardsData.map(c => c.id));
-        const dbCardIds = await this.cards.toCollection().primaryKeys();
-        const cardsToDelete = dbCardIds.filter(id => !codeCardIds.has(id));
-        if (cardsToDelete.length > 0) {
-            if (isDev) console.log(`Deleting ${cardsToDelete.length} stale cards...`);
-            await this.cards.bulkDelete(cardsToDelete);
-        }
-
-        // Scouts
-        const codeScoutIds = new Set(scoutsData.map(s => s.id));
-        const dbScoutIds = await this.scouts.toCollection().primaryKeys();
-        const scoutsToDelete = dbScoutIds.filter(id => !codeScoutIds.has(id));
-        if (scoutsToDelete.length > 0) {
-            if (isDev) console.log(`Deleting ${scoutsToDelete.length} stale scouts...`);
-            await this.scouts.bulkDelete(scoutsToDelete);
-        }
-
-        if (isDev) console.log("Seeding/Syncing complete.");
+        if (isDev) console.log("Asset syncing complete.");
     }
 
 }

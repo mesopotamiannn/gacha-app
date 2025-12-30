@@ -109,11 +109,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 // @ts-ignore
                 const { SCOUTS } = await import('../data/scouts/index');
 
-                await db.seed(CARDS, SCOUTS);
+                // 1. Critical Data Sync
+                await db.seedData(CARDS, SCOUTS);
 
                 const loadedCards = await db.cards.toArray();
                 const loadedScouts = await db.scouts.toArray();
-                const loadedAssets = await db.assets.toArray();
+                const loadedAssets = await db.assets.toArray(); // Initial load of existing assets
 
                 const assetMap: Record<string, string> = {};
                 loadedAssets.forEach(a => {
@@ -123,9 +124,24 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setCards(loadedCards);
                 setScouts(loadedScouts);
                 setAssets(assetMap);
-                setDataLoaded(true);
+                setDataLoaded(true); // UI Ready
+
+                // 2. Background Asset Sync
+                db.seedAssets(CARDS, SCOUTS).then(async () => {
+                    // Refresh assets after sync to get newly cached blobs
+                    const updatedAssets = await db.assets.toArray();
+                    const newAssetMap: Record<string, string> = {};
+                    updatedAssets.forEach(a => {
+                        newAssetMap[a.id] = URL.createObjectURL(a.blob);
+                    });
+                    setAssets(newAssetMap);
+                });
             } catch (e) {
                 console.error("Failed to load data from DB:", e);
+                // Fallback to static data if DB fails completely
+                setCards(await import('../data/cards').then(m => m.CARDS));
+                setScouts(await import('../data/scouts/index').then(m => m.SCOUTS));
+                setDataLoaded(true);
             }
         };
         initData();
