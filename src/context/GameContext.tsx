@@ -105,9 +105,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const { db } = await import('../db'); // Adjusted path
 
                 // @ts-ignore
-                const { CARDS } = await import(`../data/cards?t=${Date.now()}`);
+                const { CARDS } = await import('../data/cards');
                 // @ts-ignore
-                const { SCOUTS } = await import(`../data/scouts/index?t=${Date.now()}`);
+                const { SCOUTS } = await import('../data/scouts/index');
 
                 await db.seed(CARDS, SCOUTS);
 
