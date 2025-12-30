@@ -1,0 +1,2109 @@
+﻿import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter, Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Home, Plus, X, Edit, Menu, RectangleVertical, Smile, Share2, AlertTriangle, Coins } from 'lucide-react';
+
+import NewsScreen from './screens/NewsScreen';
+import ContactScreen from './screens/ContactScreen';
+import { NEWS } from './data/news';
+import { GameProvider, useGame } from './context/GameContext';
+import type { Card } from './types';
+
+// --- TYPES ---
+// Imported from types.ts
+
+// --- CONSTANTS ---
+
+
+
+// (PROFILE_ICONS removed)
+
+const AssetImg: React.FC<React.ImgHTMLAttributes<HTMLImageElement>> = (props) => {
+  const { resolveAsset } = useGame();
+  return <img {...props} src={props.src ? resolveAsset(props.src) : props.src} />;
+};
+
+// --- STYLES ---
+const styles: Record<string, React.CSSProperties> = {
+  appContainer: {
+    width: '100%',
+    maxWidth: '480px',
+    margin: '0 auto',
+    minHeight: '100vh',
+    background: '#f8fafc', // Light bg
+    color: '#0f172a', // Dark text
+    position: 'relative',
+    boxShadow: '0 0 20px rgba(0,0,0,0.1)',
+    display: 'flex',
+    flexDirection: 'column',
+    fontFamily: '"Outfit", sans-serif',
+    overflow: 'hidden'
+  },
+  header: {
+    position: 'fixed',
+    top: 0,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '100%',
+    maxWidth: '480px',
+    zIndex: 50,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '1rem 0',
+    background: '#004f87', // 004f87White transparent
+    backdropFilter: 'blur(12px)',
+    borderBottom: '1px solid #e2e8f0',
+    color: '#FFF' // Main color
+  },
+  userInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.2rem',
+    fontSize: '0.9rem',
+    fontWeight: 800,
+    color: '#2d3033ff',
+    marginLeft: '0.5rem'
+  },
+  creditBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    background: '#010101',
+    padding: '0.4rem 0.5rem 0.4rem 0.75rem',
+    // borderRadius: '999px',
+    borderTop: '1px solid #e2e8f0',
+    borderLeft: '1px solid #e2e8f0',
+    borderBottom: '1px solid #e2e8f0',
+    fontSize: '0.9rem',
+    color: '#ebebebff'
+  },
+  addCreditBtn: {
+    background: '#e2e8f0',
+    //border: '1px solid #000',
+    width: 24,
+    height: 24,
+    borderRadius: '25%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#000',
+    cursor: 'pointer',
+    boxShadow: '0 2px 4px rgba(39, 91, 145, 0.3)'
+  },
+  content: {
+    flex: 1,
+    overflowY: 'auto',
+    marginTop: '64px', // Header height
+    paddingBottom: '80px', // BottomNav height
+  },
+  bottomNav: {
+    position: 'fixed',
+    bottom: 0,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '100%',
+    maxWidth: '480px',
+    background: 'rgba(255, 255, 255, 0.95)',
+    borderTop: '1px solid #e2e8f0',
+    display: 'flex',
+    justifyContent: 'space-around',
+    padding: '0.75rem 0',
+    backdropFilter: 'blur(12px)',
+    zIndex: 50,
+  },
+  navLink: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '0.25rem',
+    textDecoration: 'none',
+    fontSize: '0.65rem',
+    color: '#94a3b8',
+    transition: 'color 0.2s',
+  },
+  navLinkActive: {
+    color: '#275b91',
+    fontWeight: 'bold'
+  },
+  gachaButton: {
+    background: 'linear-gradient(135deg, #275b91, #1e40af)', // Main gradient
+    border: '3px solid #b8b8b8ff',
+    padding: '8px 16px',
+    borderRadius: '5px',
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: '1rem',
+    cursor: 'pointer',
+    width: '100%',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+    transition: 'transform 0.1s',
+  },
+  gachaButton1: {
+    background: 'linear-gradient(135deg, #275b91, #1e40af)', // Main gradient
+    border: '4px solid #b8b8b8ff',
+    padding: '8px 16px',
+    borderRadius: '5px',
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: '1rem',
+    cursor: 'pointer',
+    width: '100%',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+    transition: 'transform 0.1s',
+  },
+  gachaButton10: {
+    background: 'linear-gradient(135deg, #275b91, #1e40af)', // Main gradient
+    border: '4px solid #f8d15aff',
+    borderRadius: '5px',
+    color: 'white',
+    fontWeight: '600',
+    fontSize: '1.2rem',
+    cursor: 'pointer',
+    width: '100%',
+    boxShadow: '0 8px 20px -4px rgba(39, 91, 145, 0.5)',
+    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  modalOverlay: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 100,
+    background: 'rgba(0,0,0,0.6)',
+    backdropFilter: 'blur(4px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '2rem',
+  },
+  modalContent: {
+    background: 'white',
+    padding: '1.5rem',
+    borderRadius: '16px',
+    width: '100%',
+    maxWidth: '360px',
+    //border: '1px solid #e2e8f0',
+    boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.2)',
+    position: 'relative',
+    color: '#ffffffff'
+  },
+  menuItem: {
+    padding: '1rem',
+    background: 'white',
+    borderRadius: 12,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    border: '1px solid #e2e8f0',
+    marginBottom: '0.75rem',
+    cursor: 'pointer',
+    color: '#0f172a',
+    fontWeight: 'bold',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+  }
+};
+
+// --- COMPONENTS ---
+
+const RankBadge: React.FC<{ rank: string; size?: 'sm' | 'md'; variant?: 'default' | 'large' }> = ({ rank, size = 'sm', variant = 'default' }) => {
+  let bgColor = '#cbd5e1'; // Default
+  let textColor = '#0f172a';
+
+  if (rank === 'B') { bgColor = '#60a5fa'; textColor = '#fff'; }
+  if (rank === 'A') { bgColor = '#10b981'; textColor = '#fff'; }
+  if (rank === 'S') { bgColor = '#facc15'; textColor = '#000'; }
+  if (rank === 'SS') { bgColor = 'linear-gradient(135deg, #f0abfc, #a855f7)'; textColor = '#fff'; }
+
+  const isGradient = rank === 'SS';
+
+  if (variant === 'large') {
+    return (
+      <div style={{
+        background: isGradient ? bgColor : undefined,
+        backgroundColor: isGradient ? undefined : bgColor,
+        color: textColor,
+        width: '40px',
+        height: '40px',
+        borderRadius: '50%',
+        fontSize: '1.4rem',
+        fontWeight: 900,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: rank === 'SS' || rank === 'S' ? '0 0 10px rgba(251, 191, 36, 0.4)' : 'none',
+      }}>
+        {rank}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      background: isGradient ? bgColor : undefined,
+      backgroundColor: isGradient ? undefined : bgColor,
+      color: textColor,
+      padding: size === 'sm' ? '1px 6px' : '2px 10px',
+      borderRadius: '50%',
+      fontSize: size === 'sm' ? '0.7rem' : '0.9rem',
+      fontWeight: 800,
+      display: 'inline-block',
+      textAlign: 'center',
+      boxShadow: rank === 'SS' || rank === 'S' ? '0 0 5px rgba(251, 191, 36, 0.4)' : 'none',
+    }}>
+      {rank}
+    </div>
+  );
+};
+
+const GiftCodeModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+  const { redeemCode } = useGame();
+  const [code, setCode] = useState('');
+  const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = redeemCode(code);
+
+    setMessage({
+      text: result.message,
+      isError: !result.success
+    });
+
+    if (result.success) {
+      setCode('');
+      // Auto close after 1.5s on success
+      setTimeout(() => {
+        onClose();
+        setMessage(null);
+      }, 1500);
+    }
+  };
+
+  return (
+    <div style={styles.modalOverlay} onClick={onClose}>
+      <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>キャンペーンコード入力</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.5rem' }}>コードを入力してください</label>
+            <input
+              type="text"
+              value={code}
+              onChange={e => setCode(e.target.value)}
+              placeholder="例: WELCOME2025"
+              style={{ width: '100%', padding: '0.7rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '1rem', letterSpacing: '0.1em', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {message && (
+            <p style={{
+              color: message.isError ? '#ef4444' : '#22c55e',
+              fontSize: '0.9rem',
+              marginBottom: '1rem',
+              fontWeight: 'bold',
+              textAlign: 'center'
+            }}>
+              {message.text}
+            </p>
+          )}
+
+          <button type="submit" style={{ width: '100%', padding: '0.75rem', background: '#275b91', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+            コードを使用する
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const Header: React.FC = () => {
+  const { state, rankInfo, nextBonusTime } = useGame();
+  const [showGiftModal, setShowGiftModal] = useState(false);
+
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    if (!nextBonusTime) {
+      setTimeLeft('');
+      return;
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const diff = nextBonusTime - now;
+
+      if (diff <= 0) {
+        setTimeLeft('ボーナス獲得可能');
+      } else {
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeLeft(`次のボーナスまで ${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')} `);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [nextBonusTime]);
+
+  return (
+    <>
+      <header style={styles.header}>
+        <div style={styles.userInfo}>
+          <RankBadge rank={rankInfo.rank} size="sm" />
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+            <span style={{ fontSize: '1.2rem', color: '#e2e8f0', fontWeight: 'bold' }}>{state.userName}</span>
+            {/* Countdown Timer */}
+            <span style={{ fontSize: '0.65rem', color: '#e2e8f0', fontWeight: 'normal' }}>
+              {timeLeft}
+            </span>
+          </div>
+        </div>
+        <div style={styles.creditBadge}>
+          <span style={{ color: '#ffce53ff', fontWeight: 'bold' }}>◆</span>
+          <span>{state.credits.toLocaleString()}</span>
+          <button
+            onClick={() => setShowGiftModal(true)}
+            style={styles.addCreditBtn}
+            title="ギフトコード入力"
+          >
+            <Plus size={16} strokeWidth={3} />
+          </button>
+        </div>
+      </header>
+      <GiftCodeModal isOpen={showGiftModal} onClose={() => setShowGiftModal(false)} />
+    </>
+  );
+};
+
+const BottomNav: React.FC = () => {
+  const location = useLocation();
+  const isActive = (path: string) => location.pathname === path;
+
+  return (
+    <nav style={styles.bottomNav}>
+      <NavLink to="/" style={{ ...styles.navLink, ...(isActive('/') ? styles.navLinkActive : {}) }}>
+        <Home size={24} />
+        <span>ホーム</span>
+      </NavLink>
+      <NavLink to="/scout" style={{ ...styles.navLink, ...(isActive('/scout') ? styles.navLinkActive : {}) }}>
+        <RectangleVertical size={24} />
+        <span>スカウト</span>
+      </NavLink>
+      <NavLink to="/collection" style={{ ...styles.navLink, ...(isActive('/collection') ? styles.navLinkActive : {}) }}>
+        <Smile size={24} />
+        <span>マイページ</span>
+      </NavLink>
+      <NavLink to="/menu" style={{ ...styles.navLink, ...(isActive('/menu') ? styles.navLinkActive : {}) }}>
+        <Menu size={24} />
+        <span>メニュー</span>
+      </NavLink>
+    </nav>
+  );
+};
+
+const InsufficientCreditsModal: React.FC<{ isOpen: boolean; shortage: number; onClose: () => void }> = ({ isOpen, shortage, onClose }) => {
+  if (!isOpen) return null;
+  return (
+    <div style={styles.modalOverlay} onClick={onClose}>
+      <div style={{ ...styles.modalContent, background: '#275b91' }} onClick={e => e.stopPropagation()}>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <div style={{
+            width: '80px',
+            height: '80px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto'
+          }}>
+            <AlertTriangle size={40} color="#ef4444" />
+          </div>
+          <div style={{ color: '#FFF', fontSize: '1rem' }}>
+            クレジットが
+          </div>
+          <div>
+            <span style={{ color: '#FFF', fontWeight: 'bold', fontSize: '1.3rem', marginRight: '0.5rem' }}>
+              {shortage}
+            </span>
+            足りません
+          </div>
+        </div>
+        <button onClick={onClose} style={{ width: '100%', padding: '0.75rem', background: '#275b91', color: 'white', border: '3px solid #FFF', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}>閉じる</button>
+      </div>
+    </div>
+  );
+};
+
+const ConfirmDialog: React.FC<{ isOpen: boolean; cost: number; count: number; currentCredits: number; onConfirm: () => void; onCancel: () => void }> = ({ isOpen, cost, count, currentCredits, onConfirm, onCancel }) => {
+  if (!isOpen) return null;
+  const remainingCredits = currentCredits - cost;
+  return (
+    <div style={styles.modalOverlay} onClick={onCancel}>
+      <div style={{ ...styles.modalContent, background: '#275b91' }} onClick={e => e.stopPropagation()}>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <div style={{
+            width: '80px',
+            height: '80px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto'
+          }}>
+            <Coins size={40} color="#FFF" />
+          </div>
+          <div style={{ padding: '1.5rem' }}>
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ color: '#ffffff', fontSize: '0.9rem', marginBottom: '0.25rem' }}>クレジット</div>
+              <div style={{ color: '#ffffff', fontSize: '1.2rem' }}><span style={{ fontWeight: 'bold' }}>{cost}</span>を消費します</div>
+            </div>
+            <div>
+              <div style={{ color: '#ffffff', fontSize: '0.9rem', marginBottom: '0.25rem' }}>スカウト後の所持数</div>
+              <div style={{ color: '#ffffff', fontSize: '1.2rem', fontWeight: 'bold' }}>{remainingCredits}</div>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <button onClick={onConfirm} style={{ width: '100%', padding: '0.75rem', background: '#275b91', color: 'white', border: '3px solid #FFF', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem' }}>{count === 1 ? '1回スカウトする' : `${count} 連スカウトする`}</button>
+          <button onClick={onCancel} style={{ width: '100%', padding: '0.75rem', background: '#FFF', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem' }}>キャンセル</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DonutChart: React.FC<{ count: number; total: number; percentage: number }> = ({ count, total, percentage }) => {
+  return (
+    <div style={{ position: 'relative', width: 90, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Background Circle */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        borderRadius: '50%',
+        background: `conic-gradient(#275b91 ${percentage}%, #e2e8f0 ${percentage}% 100%)`,
+      }} />
+      {/* Inner Hollow */}
+      <div style={{
+        position: 'absolute',
+        inset: 10,
+        borderRadius: '50%',
+        background: 'white',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 'bold', marginBottom: -2 }}>Collection</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+          <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#275b91', borderBottom: '1px solid #275b91' }}>{count}</span>
+          <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#275b91' }}>{total}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DetailedCardView: React.FC<{ card: Card; showDescription?: boolean; isNew?: boolean }> = ({ card, showDescription = true, isNew = false }) => {
+  const borderColor = card.rarity === 5 ? '#a855f7' : card.rarity === 4 ? '#fbbf24' : card.rarity === 3 ? '#22c55e' : card.rarity === 2 ? '#3b82f6' : '#475569';
+  const starString = '★'.repeat(card.rarity);
+
+  return (
+    <div style={{
+      background: 'white',
+      borderRadius: '20px',
+      padding: '1.5rem',
+      maxWidth: '340px', // Slightly smaller max-width for better fit on small screens
+      width: '100%',     // Allow it to fill the container (which might be the modal)
+      boxSizing: 'border-box', // Ensure padding is included in width
+      textAlign: 'center',
+      position: 'relative'
+    }}>
+      {isNew && (
+        <div style={{
+          position: 'absolute',
+          top: -10,
+          right: -10,
+          background: '#ef4444',
+          color: 'white',
+          padding: '4px 8px',
+          fontWeight: '900',
+          fontSize: '0.9rem',
+          zIndex: 10,
+          border: '2px solid white',
+          boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+          transform: 'rotate(10deg)'
+        }}>
+          NEW
+        </div>
+      )}
+      {/* Card Image */}
+      <div style={{ marginTop: '0', width: '100%', aspectRatio: '2/3', background: '#0f172a', borderRadius: 8, overflow: 'hidden', border: `2px solid ${borderColor} `, marginBottom: '0.5rem' }}>
+        <AssetImg src={card.imageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      </div>
+
+      {/* Card Name */}
+      <h2 style={{ textAlign: 'center', margin: '0.5rem 0 0.2rem', color: borderColor, fontSize: '1.4rem', fontWeight: 800 }}>{card.name}</h2>
+
+      {/* Scout Name */}
+      <div style={{ textAlign: 'center', marginBottom: '0.2rem', lineHeight: 1 }}>
+        <small style={{ fontSize: '0.6rem', color: '#94a3b8', letterSpacing: '0.05em' }}>
+          {(() => {
+            const { getScoutByCardId } = useGame();
+            const scout = getScoutByCardId(card.id);
+            return scout ? scout.title : 'FIGHTERS GIRL UNOFFICIAL COLLECTION 2025';
+          })()}
+        </small>
+      </div>
+
+      {/* Stars */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+        <span style={{ color: borderColor, fontWeight: 'bold', fontSize: '1.2rem' }}>{starString}</span>
+      </div>
+
+      {/* Description */}
+      {showDescription && (
+        <p style={{ color: '#475569', lineHeight: '1.6', fontSize: '0.9rem', textAlign: 'center', margin: 0 }}>
+          {card.description}
+        </p>
+      )}
+    </div>
+  );
+};
+
+const CardDetailModal: React.FC<{ card: Card; onClose: () => void }> = ({ card, onClose }) => {
+  return (
+    <div style={styles.modalOverlay} onClick={onClose}>
+      <div style={{ ...styles.modalContent, padding: 0, background: 'transparent', boxShadow: 'none' }} onClick={e => e.stopPropagation()}>
+        <div style={{ position: 'relative' }}>
+          <DetailedCardView card={card} />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem', width: '90%', margin: '0.5rem auto 0' }}>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '0.5rem 1rem',
+                background: '#475569',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CardView: React.FC<{ card: Card; count?: number; size?: 'sm' | 'md' | 'lg'; onClick?: () => void; isNew?: boolean }> = ({ card, count, size = 'md', onClick, isNew = false }) => {
+  const borderColor = card.rarity === 5 ? '#a855f7' : card.rarity === 4 ? '#fbbf24' : card.rarity === 3 ? '#22c55e' : card.rarity === 2 ? '#3b82f6' : '#475569';
+  const bgGradient = card.rarity === 5
+    ? 'linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(0,0,0,0.8))'
+    : 'linear-gradient(135deg, rgba(51, 65, 85, 0.5), rgba(0,0,0,0.8))';
+
+  const wrapperStyle: React.CSSProperties = {
+    position: 'relative',
+    border: `2px solid ${borderColor} `,
+    borderRadius: 8,
+    background: bgGradient,
+    width: size === 'lg' ? '100%' : '100%',
+    maxWidth: size === 'lg' ? '280px' : '160px',
+    aspectRatio: '2/3',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    boxShadow: card.rarity === 5 ? '0 0 15px rgba(168, 85, 247, 0.5)' : 'none',
+    margin: '0 auto',
+    cursor: onClick ? 'pointer' : 'default',
+    transform: size === 'lg' ? 'scale(1)' : 'scale(1)',
+    transition: 'transform 0.2s',
+  };
+
+  return (
+    <div style={wrapperStyle} onClick={onClick}>
+      <div style={{ flex: 1, position: 'relative' }}>
+        <div style={{ width: '100%', height: '100%', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <AssetImg src={card.imageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+        <div style={{ position: 'absolute', top: 4, left: 4, color: borderColor, textShadow: '0 1px 2px black', fontSize: '0.7rem', fontWeight: 800 }}>
+          {'★'.repeat(card.rarity)}
+        </div>
+      </div>
+
+      {
+        isNew && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            background: '#ef4444',
+            color: 'white',
+            padding: '2px 6px',
+            fontWeight: 'bold',
+            fontSize: '0.6rem',
+            zIndex: 10,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+          }}>
+            NEW
+          </div>
+        )
+      }
+      {
+        size !== 'lg' && (
+          <div style={{ padding: '0.3rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{card.name}</div>
+          </div>
+        )
+      }
+
+      {
+        count && count > 1 && (
+          <div style={{
+            position: 'absolute',
+            top: -6,
+            right: -6,
+            background: '#ef4444',
+            color: 'white',
+            borderRadius: '50%',
+            width: 24,
+            height: 24,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 'bold',
+            fontSize: '0.75rem',
+            border: '2px solid #0f172a'
+          }}>
+            x{count}
+          </div>
+        )
+      }
+    </div >
+  );
+};
+
+const ScoutScreen: React.FC = () => {
+  const { state, pullGacha, scouts } = useGame();
+  const [isLoading, setIsLoading] = useState<{ active: boolean; hasUR: boolean }>({ active: false, hasUR: false });
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [revealQueue, setRevealQueue] = useState<Card[]>([]);
+  const [revealIndex, setRevealIndex] = useState(-1);
+  const [showSummary, setShowSummary] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [newCards, setNewCards] = useState<Set<string>>(new Set());
+
+  // Keep track of last pulled scout info for "Scout Again"
+  const [lastScoutInfo, setLastScoutInfo] = useState<{ id: string; count: number; cost: number } | null>(null);
+
+  // Scroll to scout on mount if ID is provided in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const scoutId = params.get('id');
+    if (scoutId) {
+      setTimeout(() => {
+        const element = document.getElementById(`scout-${scoutId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  }, []);
+
+  // Custom Confirm Dialog State
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; count: number; cost: number; scoutId: string }>({
+    isOpen: false, count: 0, cost: 0, scoutId: ''
+  });
+  const [insufficientModal, setInsufficientModal] = useState<{ isOpen: boolean; shortage: number; required: number }>({
+    isOpen: false, shortage: 0, required: 0
+  });
+
+  const triggerPull = (count: number, scoutId: string, scoutCost: number) => {
+    const cost = scoutCost * count;
+    if (state.credits < cost) {
+      setInsufficientModal({ isOpen: true, shortage: cost - state.credits, required: cost });
+      return;
+    }
+    setConfirmModal({ isOpen: true, count, cost, scoutId });
+  };
+
+  const confirmPull = () => {
+    const { count, scoutId } = confirmModal;
+    setConfirmModal({ ...confirmModal, isOpen: false });
+
+    // Identify new cards BEFORE adding to inventory
+    // To do this strictly correctly with multiple cards, we need to know the state before pull
+    const currentOwnedIds = new Set(state.inventory);
+
+    // We initiate pull
+    const cards = pullGacha(count, scoutId);
+
+    // Calculate new ones for this batch
+    const newSet = new Set<string>();
+    const tempOwned = new Set(currentOwnedIds); // Track within this batch for duplicates
+
+    cards.forEach(c => {
+      if (!tempOwned.has(c.id)) {
+        newSet.add(c.id);
+        tempOwned.add(c.id);
+      }
+    });
+    setNewCards(newSet);
+    const scout = scouts.find(s => s.id === scoutId);
+    if (scout) {
+      setLastScoutInfo({ id: scoutId, count, cost: scout.cost });
+    }
+
+    // Pull cards first to check for UR
+    // const cards = pullGacha(count, scoutId); // Already pulled above
+    const hasUR = cards.some(card => card.rarity === 5);
+
+    setIsLoading({ active: true, hasUR });
+
+    // Show loading animation for 2 seconds before revealing cards
+    setTimeout(() => {
+      setIsLoading({ active: false, hasUR: false });
+
+      if (cards.length > 0) {
+        // Keep cards in random order for reveal animation
+        // Only sort for the summary view
+        setRevealQueue(cards); // Random order for reveal
+        setRevealIndex(0);
+        setShowSummary(false);
+        setIsAnimating(true);
+      }
+    }, 2000);
+  };
+
+  const handleScoutAgain = () => {
+    if (!lastScoutInfo) return;
+    // Trigger new pull with same params
+    closeGacha(); // Reset current view
+    triggerPull(lastScoutInfo.count, lastScoutInfo.id, lastScoutInfo.cost);
+  };
+
+  const nextReveal = () => {
+    // If it's a single pull (queue length 1), next button should just close
+    if (revealQueue.length === 1) {
+      closeGacha();
+      return;
+    }
+
+    if (revealIndex < revealQueue.length - 1) {
+      setRevealIndex(prev => prev + 1);
+    } else {
+      setShowSummary(true);
+    }
+  };
+
+  const skipReveal = () => {
+    setShowSummary(true);
+  };
+
+  const closeGacha = () => {
+    setIsAnimating(false);
+    setRevealQueue([]);
+    setRevealIndex(-1);
+    setShowSummary(false);
+  };
+
+  // Loading Animation
+  if (isLoading.active) {
+    const isURGuaranteed = isLoading.hasUR;
+
+    return (
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        background: isURGuaranteed
+          ? 'radial-gradient(circle at center, #4c1d95 0%, #000000 100%)'
+          : 'radial-gradient(circle at center, #172554 0%, #020617 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        perspective: '1000px'
+      }}>
+
+        {/* === Background Effects === */}
+        {/* Grid Floor (3D effect) */}
+        <div style={{
+          position: 'absolute',
+          inset: '-50%',
+          backgroundSize: '40px 40px',
+          backgroundImage: isURGuaranteed
+            ? 'linear-gradient(rgba(168, 85, 247, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(168, 85, 247, 0.3) 1px, transparent 1px)'
+            : 'linear-gradient(rgba(59, 130, 246, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.2) 1px, transparent 1px)',
+          transform: 'rotateX(60deg) translateY(0)',
+          animation: 'gridMove 2s linear infinite',
+          opacity: 0.4,
+          zIndex: 0
+        }} />
+
+        {/* God Rays (UR Only) */}
+        {isURGuaranteed && (
+          <div style={{
+            position: 'absolute',
+            inset: '-100%',
+            background: 'conic-gradient(from 0deg, transparent 0deg, rgba(234, 179, 8, 0.2) 20deg, transparent 40deg, rgba(168, 85, 247, 0.2) 60deg, transparent 80deg, rgba(234, 179, 8, 0.2) 100deg, transparent 120deg)',
+            animation: 'rotateRays 10s linear infinite',
+            zIndex: 1,
+            mixBlendMode: 'screen'
+          }} />
+        )}
+
+        {/* Converging Speed Lines (Normal) */}
+        {!isURGuaranteed && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'repeating-conic-gradient(from 0deg, transparent 0deg, transparent 10deg, rgba(59, 130, 246, 0.1) 10.5deg)',
+            animation: 'rotateRays 2s linear infinite reverse',
+            zIndex: 1,
+            opacity: 0.5
+          }} />
+        )}
+
+        {/* === Center Core Animation === */}
+        <div style={{
+          position: 'relative',
+          width: '200px',
+          height: '200px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10,
+          animation: isURGuaranteed ? 'shake 0.2s ease-in-out infinite' : 'none'
+        }}>
+          {/* Core Ring 1 */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '50%',
+            border: isURGuaranteed ? '4px solid #facc15' : '4px solid #3b82f6',
+            borderTopColor: 'transparent',
+            borderRightColor: 'transparent',
+            animation: 'spin 1s linear infinite',
+            boxShadow: isURGuaranteed ? '0 0 30px #facc15' : '0 0 20px #3b82f6'
+          }} />
+
+          {/* Core Ring 2 (Counter rotate) */}
+          <div style={{
+            position: 'absolute',
+            inset: '20px',
+            borderRadius: '50%',
+            border: isURGuaranteed ? '4px solid #a855f7' : '4px solid #60a5fa',
+            borderBottomColor: 'transparent',
+            borderLeftColor: 'transparent',
+            animation: 'spin 1.5s linear infinite reverse',
+            boxShadow: isURGuaranteed ? '0 0 30px #a855f7' : '0 0 20px #60a5fa'
+          }} />
+
+          {/* Inner Light Ball */}
+          <div style={{
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            background: isURGuaranteed ? 'radial-gradient(#ffffff, #facc15, #a855f7)' : 'radial-gradient(#ffffff, #60a5fa, #1d4ed8)',
+            boxShadow: isURGuaranteed ? '0 0 60px 20px rgba(250, 204, 21, 0.6)' : '0 0 50px 10px rgba(59, 130, 246, 0.5)',
+            animation: 'pulseCore 0.5s ease-in-out infinite alternate',
+          }} />
+
+          {/* Particles (Orbiting) */}
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{
+              position: 'absolute',
+              width: '10px',
+              height: '10px',
+              borderRadius: '50%',
+              background: isURGuaranteed ? '#fff' : '#60a5fa',
+              top: '50%',
+              left: '50%',
+              transformOrigin: `${60 + i * 20}px 0`,
+              animation: `orbit ${1 + i * 0.5}s linear infinite`,
+              boxShadow: isURGuaranteed ? '0 0 10px #fff' : '0 0 5px #60a5fa'
+            }} />
+          ))}
+
+        </div>
+
+        {/* === Text === */}
+        <div style={{
+          marginTop: '3rem',
+          zIndex: 20,
+          textAlign: 'center',
+          animation: 'fadeInUp 0.5s ease-out'
+        }}>
+          <h2 style={{
+            color: 'white',
+            fontSize: isURGuaranteed ? '3rem' : '2rem',
+            fontWeight: 900,
+            margin: 0,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            textShadow: isURGuaranteed ? '0 0 20px #facc15' : '0 0 15px #3b82f6',
+            fontStyle: 'italic'
+          }}>
+            {isURGuaranteed ? 'CONGRATS!!' : 'SCOUTING'}
+          </h2>
+          <div style={{
+            height: '4px',
+            width: '100%',
+            background: isURGuaranteed ? 'linear-gradient(90deg, transparent, #facc15, transparent)' : 'linear-gradient(90deg, transparent, #3b82f6, transparent)',
+            marginTop: '0.5rem',
+            animation: 'widthPulse 1s ease-in-out infinite'
+          }} />
+        </div>
+
+        {/* Flash Overlay (For the end) */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'white',
+          zIndex: 200,
+          opacity: 0,
+          animation: 'flashEnd 2s ease-in-out forwards',
+          pointerEvents: 'none'
+        }} />
+
+        <style>{`
+@keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+}
+@keyframes rotateRays {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+}
+@keyframes gridMove {
+  0 % { transform: rotateX(60deg) translateY(0); }
+  100 % { transform: rotateX(60deg) translateY(40px); }
+}
+@keyframes pulseCore {
+  0 % { transform: scale(0.9); opacity: 0.8; }
+  100 % { transform: scale(1.1); opacity: 1; filter: brightness(1.2); }
+}
+@keyframes orbit {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+}
+@keyframes shake {
+  0 %, 100 % { transform: translate(0, 0); }
+  25 % { transform: translate(-2px, 2px); }
+  50 % { transform: translate(2px, -2px); }
+  75 % { transform: translate(-2px, -2px); }
+}
+@keyframes widthPulse {
+  0 %, 100 % { transform: scaleX(0.5); opacity: 0.5; }
+  50 % { transform: scaleX(1); opacity: 1; }
+}
+@keyframes flashEnd {
+  0 % { opacity: 0; }
+  80 % { opacity: 0; }
+  95 % { opacity: 1; }
+  100 % { opacity: 1; } /* Stay white until component unmounts */
+}
+@keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+}
+`}</style>
+      </div>
+    );
+  }
+
+  // If animating, show overlay (Result Screen)
+  if (isAnimating) {
+    const currentCard = revealQueue[revealIndex];
+    const isUR = currentCard?.rarity === 5;
+    const isSR = currentCard?.rarity === 4;
+
+    let overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, zIndex: 100, overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1rem' };
+    if (isUR) overlayStyle.background = 'linear-gradient(135deg, #4c1d95, #000000)';
+    else if (isSR) overlayStyle.background = 'linear-gradient(135deg, #713f12, #000000)';
+    else overlayStyle.background = 'rgba(0,0,0,0.95)';
+
+    return (
+      <div style={overlayStyle}>
+        {showSummary ? (
+          // Summary View
+          // Summary View
+          <div style={{ width: '100%', minHeight: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+            <h2 style={{ color: 'white', marginBottom: '2rem', fontSize: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.1em', flexShrink: 0 }}>獲得したカード</h2>
+            {/* Sort cards by rarity for summary display */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', width: '100%', maxWidth: '400px', marginBottom: '2rem' }}>
+              {[...revealQueue].sort((a, b) => b.rarity - a.rarity).map((card, i) => (
+                <CardView key={i} card={card} size="sm" onClick={() => setSelectedCard(card)} isNew={newCards.has(card.id)} />
+              ))}
+            </div>
+            <button
+              onClick={handleScoutAgain}
+              style={{ ...styles.gachaButton, marginBottom: '0.5rem', background: '#275b91', boxShadow: '0 4px 6px rgba(39, 91, 145, 0.4)', width: '100%', maxWidth: '300px' }}
+            >
+              もう一度引く
+            </button>
+            <button
+              onClick={closeGacha}
+              style={{ background: 'transparent', border: 'none', color: '#94a3b8', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.9rem', paddingBottom: '1rem' }}
+            >
+              閉じる
+            </button>
+          </div>
+        ) : (
+          // Reveal View
+          <div style={{ width: '100%', minHeight: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+              {(revealQueue.length > 1) && (
+                <div style={{ marginBottom: '2rem', color: '#94a3b8', fontSize: '1.2rem' }}>
+                  {revealIndex + 1} / {revealQueue.length}
+                </div>
+              )}
+
+              {/* Card Animation Container */}
+              <div style={{
+                animation: isUR ? 'shake 0.5s ease-in-out, popIn 0.5s 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both' :
+                  isSR ? 'popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)' :
+                    'fadeIn 0.4s ease-out',
+                position: 'relative'
+              }}>
+                {isUR && <div style={{ position: 'absolute', inset: -20, background: 'conic-gradient(from 0deg, red, orange, yellow, green, blue, purple, red)', filter: 'blur(20px)', opacity: 0.5, borderRadius: '50%', animation: 'spin 2s linear infinite' }} />}
+                {isSR && <div style={{ position: 'absolute', inset: -20, background: 'radial-gradient(circle, #facc15 0%, transparent 70%)', filter: 'blur(20px)', opacity: 0.5, animation: 'pulse 1s infinite alternate' }} />}
+
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <DetailedCardView
+                    card={currentCard}
+                    isNew={newCards.has(currentCard.id)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Button Container - Absolute or fixed height to prevent shift */}
+            <div style={{ width: '100%', paddingBottom: '2rem', height: '80px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+              {revealQueue.length === 1 ? (
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                  <button
+                    onClick={handleScoutAgain}
+                    style={{ ...styles.gachaButton, marginBottom: '0.5rem', background: '#275b91', boxShadow: '0 4px 6px rgba(39, 91, 145, 0.4)', width: '100%', maxWidth: '300px' }}
+                  >
+                    もう一度引く
+                  </button>
+                  <button
+                    onClick={closeGacha}
+                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.9rem', paddingBottom: '1rem' }}
+                  >
+                    閉じる
+                  </button>
+                </div>
+              ) : (
+                <div style={{ width: '100%', display: 'flex', gap: '1rem' }}>
+                  <button onClick={skipReveal} style={{ flex: 1, padding: '1rem', background: 'transparent', border: '1px solid #475569', color: '#94a3b8', borderRadius: 8 }}>
+                    すべての結果を表示
+                  </button>
+                  <button onClick={nextReveal} style={{ flex: 2, padding: '1rem', background: 'white', color: 'black', borderRadius: 8, fontWeight: 'bold', fontSize: '1.1rem' }}>
+                    {revealIndex < revealQueue.length - 1 ? '次へ' : '獲得カード一覧'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {
+          selectedCard && (
+            <CardDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />
+          )
+        }
+
+        <style>{`
+@keyframes popIn {
+                        from { transform: scale(0.5); opacity: 0; }
+                        to { transform: scale(1); opacity: 1; }
+}
+@keyframes fadeIn {
+                        from { opacity: 0; transform: translateY(20px); }
+                        to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shake {
+  0 %, 100 % { transform: translateX(0); }
+  25 % { transform: translateX(-10px) rotate(- 5deg);
+}
+75 % { transform: translateX(10px) rotate(5deg); }
+                    }
+@keyframes spin {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+}
+@keyframes pulse {
+                        from { opacity: 0.3; transform: scale(0.9); }
+                        to { opacity: 0.6; transform: scale(1.1); }
+}
+`}</style>
+      </div >
+    );
+  }
+
+  // Scout Screen (Regular View - List of Scouts)
+  return (
+    <div style={{ paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '2rem', alignItems: 'center' }}>
+      {scouts.filter(scout => scout.isActive).map(scout => (
+        <div id={`scout-${scout.id}`} key={scout.id} style={{ width: '100%', maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+
+          {/* Banner */}
+          <div style={{
+            width: '100%',
+            aspectRatio: '16/9',
+            background: '#000',
+            //borderRadius: 16,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.3)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <AssetImg
+              src={scout.bannerImage}
+              alt={scout.title}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.parentElement!.style.background = `linear - gradient(135deg, ${scout.mainColor}, ${scout.subColor})`;
+                // Fallback text
+                const fallback = document.createElement('div');
+                fallback.innerText = scout.title;
+                fallback.style.color = 'white';
+                fallback.style.fontWeight = 'bold';
+                fallback.style.padding = '1rem';
+                fallback.style.textAlign = 'center';
+                e.currentTarget.parentElement!.appendChild(fallback);
+              }}
+            />
+          </div>
+
+          {/* Description */}
+          <div style={{ textAlign: 'center', marginTop: -5, padding: '0 20px' }}>
+            <h3 style={{ margin: '0 0 0.5rem 0', color: '#0f172a', fontStyle: 'italic', fontWeight: 800 }}>{scout.title}</h3>
+            <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1.5, textAlign: 'left', whiteSpace: 'pre-wrap' }}>
+              {scout.description}
+            </p>
+            <small style={{ color: '#64748b', fontSize: '0.5rem', lineHeight: 1.2, textAlign: 'left', whiteSpace: 'pre-wrap' }}>
+              {scout.note}
+            </small>
+          </div>
+
+          {/* Buttons */}
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'row', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button onClick={() => triggerPull(1, scout.id, scout.cost)} style={{ ...styles.gachaButton1, marginLeft: '16px', flex: 1 }}>
+              1回<br /><div style={{ background: '#333333ff', paddingRight: '5px', textAlign: 'right', fontSize: '0.6rem', fontWeight: 'normal', opacity: 0.9, marginTop: 4 }}>{scout.cost} pt / {state.credits} pt</div>
+            </button>
+            <button
+              onClick={() => triggerPull(10, scout.id, scout.cost)}
+              style={{
+                ...styles.gachaButton10,
+                marginRight: '16px',
+                flex: 1,
+                padding: '0 10px',
+                fontSize: '1rem',
+                background: `linear-gradient(135deg, ${scout.mainColor}, ${scout.subColor})`,
+                boxShadow: `0 8px 20px -4px ${scout.mainColor}80` // 80 is alpha ~50%
+              }}
+            >
+              <span style={{ color: '#f8d15aff' }}>10連</span>
+              <div style={{ background: '#333333ff', paddingRight: '5px', textAlign: 'right', fontSize: '0.6rem', fontWeight: 'normal', opacity: 0.9, marginTop: 4 }}>
+                {scout.cost * 10} pt / {state.credits} pt
+              </div>
+            </button>
+          </div>
+
+          {/* Divider between scouts, unless it's the last one */}
+          <div style={{ width: '80%', height: '1px', background: '#e2e8f0', margin: '0.5rem 0' }} />
+        </div >
+      ))}
+
+      <InsufficientCreditsModal
+        isOpen={insufficientModal.isOpen}
+        shortage={insufficientModal.shortage}
+        onClose={() => setInsufficientModal({ ...insufficientModal, isOpen: false })}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmModal.isOpen}
+        cost={confirmModal.cost}
+        count={confirmModal.count}
+        currentCredits={state.credits}
+        onConfirm={confirmPull}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
+    </div>
+  );
+};
+
+const HowToPlayModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+  return (
+    <div style={styles.modalOverlay} onClick={onClose}>
+      <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>遊び方</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+        </div>
+        <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '0.5rem', color: '#334155', fontSize: '0.9rem', lineHeight: 1.6 }}>
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>1. スカウト（ガチャ）を引こう！</p>
+          <p style={{ marginBottom: '1rem' }}>
+            貯めたポイント（クレジット）を使ってスカウトを引き、FGのカードを集めましょう。<br />
+            1日2回12時間おきのログインボーナス、もしくはキャンペーンコードを入力してポイントを獲得できます。
+          </p>
+
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>2. コレクションを埋めよう！</p>
+          <p style={{ marginBottom: '1rem' }}>
+            獲得したカードは「コレクション」画面で確認できます。<br />
+            目指せコンプリート！
+          </p>
+
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>3. プロフィールをカスタマイズ！</p>
+          <p style={{ marginBottom: '1rem' }}>
+            お気に入りのカードをプロフィールに設定したり、ランクを上げて自慢しましょう。<br />
+            ランクはレアリティの高いカードを集めることで上昇します。
+          </p>
+        </div>
+        <div style={{ marginTop: '1.5rem' }}>
+          <button onClick={onClose} style={{ width: '100%', padding: '0.75rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>閉じる</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ProfileSection: React.FC<{ marginBottom?: string; showHowToPlay?: boolean }> = ({ marginBottom = '1rem', showHowToPlay = true }) => {
+  const { state, getFormattedInventory, rankInfo, cards } = useGame();
+  const inventoryItems = getFormattedInventory();
+  const [isEditing, setIsEditing] = useState(false);
+  const [showHowToPlayModal, setShowHowToPlayModal] = useState(false);
+  const [isCardSelectOpen, setIsCardSelectOpen] = useState(false);
+
+  // Stats Calculation
+  const totalUniqueCards = cards.length;
+  const ownedUniqueCount = new Set(state.inventory).size;
+  const progressPercentage = totalUniqueCards > 0 ? (ownedUniqueCount / totalUniqueCards) * 100 : 0;
+  const totalCardsCount = state.inventory.length;
+  const totalRarityScore = rankInfo.points;
+
+  const currentProfileCard = state.profileCardId
+    ? cards.find(c => c.id === state.profileCardId)
+    : inventoryItems.length > 0 ? inventoryItems[0].card : null;
+
+  // Rank Color Logic
+  let rankColor = '#64748b';
+  let rankGradient = 'none';
+  if (rankInfo.rank === 'B') { rankColor = '#60a5fa'; }
+  if (rankInfo.rank === 'A') { rankColor = '#10b981'; }
+  if (rankInfo.rank === 'S') { rankColor = '#facc15'; }
+  if (rankInfo.rank === 'SS') {
+    rankColor = '#d946ef';
+    rankGradient = 'linear-gradient(135deg, #f0abfc, #a855f7)';
+  }
+
+  const rankTextStyle: React.CSSProperties = {
+    fontSize: '2.5rem',
+    fontWeight: 900,
+    color: rankGradient === 'none' ? rankColor : 'transparent',
+    backgroundImage: rankGradient !== 'none' ? rankGradient : undefined,
+    backgroundClip: rankGradient !== 'none' ? 'text' : undefined,
+    WebkitBackgroundClip: rankGradient !== 'none' ? 'text' : undefined,
+    WebkitTextFillColor: rankGradient !== 'none' ? 'transparent' : undefined,
+    lineHeight: 1,
+    fontStyle: 'italic',
+    letterSpacing: '-0.05em'
+  };
+
+  return (
+    <>
+      {/* How to Play Button (Top Right, above Share/Edit) - Conditional */}
+      {showHowToPlay && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+          <button
+            onClick={() => setShowHowToPlayModal(true)}
+            style={{
+              background: '#22c55e',
+              border: 'none',
+              padding: '5px 12px',
+              borderRadius: '5px',
+              color: 'white',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.9rem',
+              fontWeight: 'bold',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}
+          >
+            <span>遊び方</span>
+          </button>
+        </div>
+      )}
+
+      {/* Top Right Buttons (Absolute) */}
+      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+        <button
+          onClick={() => {
+            const text = `FGデジタルカードで遊んでるよ！\n#lovefighters`;
+            const url = window.location.href; // Or specific app URL
+            window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+          }}
+          style={{
+            background: '#0f172a',
+            border: 'none',
+            padding: '5px 12px',
+            borderRadius: 0,
+            color: 'white',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '0.8rem',
+            fontWeight: 'bold'
+          }}
+          title="Share on X"
+        >
+          <Share2 size={14} />
+          <span>シェア</span>
+        </button >
+        <button
+          onClick={() => setIsEditing(true)}
+          style={{
+            background: '#47494cff',
+            border: 'none',
+            padding: '5px 12px',
+            borderRadius: 0,
+            color: 'white',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '0.9rem',
+            fontWeight: 'bold'
+          }}
+          title="Edit Profile"
+        >
+          <Edit size={14} />
+          <span>編集</span>
+        </button>
+      </div >
+
+      <div style={{ background: 'white', padding: 0, borderRadius: '5px', marginBottom: marginBottom, boxShadow: '0 4px 6px rgba(0,0,0,0.1)', position: 'relative', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', width: '100%', padding: '0.2rem' }}>
+          {/* Left Column: Full height Card Image */}
+          <div
+            onClick={() => setIsCardSelectOpen(true)}
+            style={{
+              background: '#d8d8d8ff',
+              width: '45%', // Fixed proportion approximately
+              aspectRatio: '2/3',
+              cursor: 'pointer',
+              position: 'relative',
+              flexShrink: 0,
+              borderRadius: '5px',
+              overflow: 'hidden',
+              objectFit: 'cover'
+            }}
+          >
+            {currentProfileCard ? (
+              <AssetImg src={currentProfileCard.imageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '2rem' }}>?</div>
+            )}
+          </div>
+
+          {/* Right Column: Info & Stats */}
+          <div style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            {/* Header: Rank + Name */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+              {/* Rank - Dynamic Color */}
+              <div style={rankTextStyle}>
+                {rankInfo.rank}
+              </div>
+              {/* Username - Black */}
+              <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {state.userName}
+              </div>
+            </div>
+
+            {/* Bottom Row: Chart & List */}
+            <div style={{ alignItems: 'center', gap: '0.75rem' }}>
+              {/* Chart Area */}
+              <div style={{ flexShrink: 0, marginBottom: '1rem' }}>
+                <DonutChart count={ownedUniqueCount} total={totalUniqueCards} percentage={progressPercentage} />
+              </div>
+
+              {/* Stats Text List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.7rem', color: '#64748b', flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>所有率</span>
+                  <strong style={{ color: '#0f172a' }}>{Math.round(progressPercentage)}%</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>コレクション数</span>
+                  <strong style={{ color: '#0f172a' }}>{ownedUniqueCount}/{totalUniqueCards}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>レアリティ数</span>
+                  <strong style={{ color: '#0f172a' }}>{totalRarityScore}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>枚数</span>
+                  <strong style={{ color: '#0f172a' }}>{totalCardsCount}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {isEditing && <EditProfileModal onClose={() => setIsEditing(false)} />}
+      {showHowToPlayModal && <HowToPlayModal isOpen={showHowToPlayModal} onClose={() => setShowHowToPlayModal(false)} />}
+      {isCardSelectOpen && <ProfileCardSelectionModal onClose={() => setIsCardSelectOpen(false)} />}
+    </>
+  );
+};
+
+const HomeScreen: React.FC = () => {
+  const { scouts } = useGame();
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const activeScouts = scouts.filter(scout => scout.isActive);
+
+  // Track scroll position to update indicator
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    const handleScroll = () => {
+      const scrollLeft = carousel.scrollLeft;
+      const itemWidth = carousel.clientWidth * 0.85; // 85% width per item
+      const index = Math.round(scrollLeft / itemWidth);
+      setCurrentBannerIndex(Math.min(index, activeScouts.length - 1));
+    };
+
+    carousel.addEventListener('scroll', handleScroll);
+    return () => carousel.removeEventListener('scroll', handleScroll);
+  }, [activeScouts.length]);
+
+  return (
+    <div style={{ padding: '1rem' }}>
+      <ProfileSection />
+
+      {/* Quick Actions */}
+      <NavLink to="/scout" style={{ textDecoration: 'none' }}>
+        <div style={{
+          background: 'white',
+          border: '7px solid #004f87',
+          borderRadius: 'none',
+          padding: '1.5rem',
+          color: '#0f172a',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 4px 10px rgba(39, 91, 145, 0.2)'
+        }}>
+          <div>
+            <div style={{ fontWeight: 'bold', fontSize: '1.5rem' }}>スカウトへ</div>
+            <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>FGをコレクションしよう</div>
+          </div>
+          <RectangleVertical size={36} color="#004f87" />
+        </div>
+      </NavLink>
+
+      {/* Banner Carousel */}
+      <div style={{ marginTop: '1.5rem' }}>
+        <div
+          ref={carouselRef}
+          style={{
+            display: 'flex',
+            gap: '1rem',
+            overflowX: 'auto',
+            scrollSnapType: 'x mandatory',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            paddingBottom: '0.5rem'
+          }}
+        >
+          {activeScouts.map((scout) => (
+            <NavLink
+              key={scout.id}
+              to={`/scout?id=${scout.id}`}
+              style={{
+                textDecoration: 'none',
+                display: 'block',
+                flex: activeScouts.length > 1 ? '0 0 85%' : '0 0 100%',
+                scrollSnapAlign: 'start'
+              }}
+            >
+              <div style={{
+                width: '100%',
+                borderRadius: 8,
+                overflow: 'hidden',
+                position: 'relative',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+                transition: 'transform 0.2s',
+                cursor: 'pointer'
+              }}
+                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                onTouchStart={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+                onTouchEnd={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <AssetImg
+                  src={scout.bannerImageHome || ''}
+                  alt={scout.title}
+                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                  onError={(e) => {
+                    // Fallback if image fails or is empty
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement!.style.background = `linear-gradient(135deg, ${scout.mainColor}, ${scout.subColor})`;
+                    const text = document.createElement('div');
+                    text.innerText = scout.title;
+                    text.style.color = 'white';
+                    text.style.fontWeight = 'bold';
+                    text.style.display = 'flex';
+                    text.style.alignItems = 'center';
+                    text.style.justifyContent = 'center';
+                    text.style.height = '150px';
+                    text.style.width = '100%';
+                    text.style.padding = '1rem';
+                    text.style.textAlign = 'center';
+                    e.currentTarget.parentElement!.appendChild(text);
+                  }}
+                />
+              </div>
+            </NavLink>
+          ))}
+        </div>
+
+        {/* Scroll Indicators */}
+        {activeScouts.length > 1 && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '8px',
+            marginTop: '12px'
+          }}>
+            {activeScouts.map((_, index) => (
+              <div
+                key={index}
+                style={{
+                  width: currentBannerIndex === index ? '24px' : '8px',
+                  height: '8px',
+                  borderRadius: '4px',
+                  background: currentBannerIndex === index ? '#275b91' : '#cbd5e1',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer'
+                }}
+                onClick={() => {
+                  const carousel = carouselRef.current;
+                  if (carousel) {
+                    const itemWidth = carousel.clientWidth * 0.85 + 16; // 85% + gap
+                    carousel.scrollTo({
+                      left: index * itemWidth,
+                      behavior: 'smooth'
+                    });
+                  }
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        <style>{`
+          div::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+      </div>
+
+      {/* Latest News Section */}
+      <div style={{ marginTop: '1.5rem' }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '1rem'
+        }}>
+          <h3 style={{
+            fontSize: '1.2rem',
+            borderLeft: '4px solid #275b91',
+            paddingLeft: '0.5rem',
+            margin: 0,
+            color: '#1e293b'
+          }}>
+            お知らせ
+          </h3>
+          <NavLink
+            to="/news"
+            style={{
+              fontSize: '0.85rem',
+              color: '#275b91',
+              textDecoration: 'none',
+              fontWeight: 'bold'
+            }}
+          >
+            もっと見る →
+          </NavLink>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {(() => {
+            // Sort news by date (newest first)
+            const sortedNews = [...NEWS].sort((a, b) => {
+              const dateA = new Date(a.date.replace(/\./g, '-'));
+              const dateB = new Date(b.date.replace(/\./g, '-'));
+              return dateB.getTime() - dateA.getTime();
+            });
+
+            // Check if news is new (within 7 days)
+            const isNew = (dateStr: string): boolean => {
+              const newsDate = new Date(dateStr.replace(/\./g, '-'));
+              const now = new Date();
+              const diffTime = now.getTime() - newsDate.getTime();
+              const diffDays = diffTime / (1000 * 60 * 60 * 24);
+              return diffDays <= 7;
+            };
+
+            return sortedNews.slice(0, 5).map((item) => {
+              const getCategoryColor = (category: string): string => {
+                switch (category) {
+                  case 'update': return '#3b82f6';
+                  case 'maintenance': return '#f59e0b';
+                  case 'event': return '#ec4899';
+                  case 'info': return '#10b981';
+                  default: return '#64748b';
+                }
+              };
+
+              const getCategoryLabel = (category: string): string => {
+                switch (category) {
+                  case 'update': return '更新';
+                  case 'maintenance': return 'メンテ';
+                  case 'event': return 'イベント';
+                  case 'info': return 'お知らせ';
+                  default: return '';
+                }
+              };
+
+              return (
+                <NavLink
+                  key={item.id}
+                  to="/news"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <div style={{
+                    background: 'white',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    border: '1px solid #e2e8f0',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      marginBottom: '0.25rem',
+                      flexWrap: 'wrap'
+                    }}>
+                      <span style={{
+                        background: getCategoryColor(item.category),
+                        color: 'white',
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '10px',
+                        fontSize: '0.65rem',
+                        fontWeight: 'bold'
+                      }}>
+                        {getCategoryLabel(item.category)}
+                      </span>
+                      {isNew(item.date) && (
+                        <span style={{
+                          background: '#ef4444',
+                          color: 'white',
+                          padding: '0.15rem 0.4rem',
+                          borderRadius: '10px',
+                          fontSize: '0.6rem',
+                          fontWeight: 'bold'
+                        }}>
+                          NEW
+                        </span>
+                      )}
+                      <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                        {item.date}
+                      </span>
+                    </div>
+                    <div style={{
+                      fontSize: '0.9rem',
+                      fontWeight: 'bold',
+                      color: '#0f172a',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {item.title}
+                    </div>
+                  </div>
+                </NavLink>
+              );
+            });
+          })()}
+        </div>
+      </div>
+
+      {/* Modals */}
+    </div>
+  );
+};
+
+const TermsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+  return (
+    <div style={styles.modalOverlay} onClick={onClose}>
+      <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>利用規約（Terms of Service）</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+        </div>
+        <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '0.5rem', color: '#334155', fontSize: '0.9rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>第1条（適用）</p>
+          <ol style={{ paddingLeft: '1rem', listStyleType: 'decimal' }}>
+            <li>本規約は、ユーザーが本サービスを利用するすべての場合に適用されます。</li>
+            <li>本サービスの利用開始時点で、本規約に同意したものとみなします。</li>
+          </ol>
+
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>第2条（定義）</p>
+          <ol style={{ paddingLeft: '1rem', listStyleType: 'decimal' }}>
+            <li><strong>本サービス</strong> : 課金・広告表示・会員登録を行わない、デジタルトカードを引くことができるウェブアプリケーションを指します。"ユーザー"とは、本サービスを利用するすべての個人または法人を指します。</li>
+            <li><strong>ユーザー</strong> : 本サービスにアクセスし、利用する全ての個人または法人を指します。</li>
+            <li><strong>カード</strong> : 本サービス内でランダムに取得できるデジタルコンテンツ（画像・テキスト等）を指します。</li>
+            <li><strong>運営者</strong> : 本サービスを提供・管理する個人または法人（本アプリの開発者）を指します。</li>
+          </ol>
+
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>第3条（利用条件）</p>
+          <ol style={{ paddingLeft: '1rem', listStyleType: 'decimal' }}>
+            <li>本サービスは 無料 で提供され、広告は表示されません。</li>
+            <li>ユーザーは 会員登録や個人情報の提供を求められることはありません。</li>
+            <li>本サービスはインターネット接続環境があれば、Windows、macOS、Linux、モバイルブラウザ など主要なプラットフォームで利用可能です。</li>
+          </ol>
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>第4条（禁止事項）</p>
+          <p style={{ marginBottom: '1rem' }}>ユーザーは、本アプリの利用にあたり、以下の行為をしてはなりません。</p>
+          <ol style={{ paddingLeft: '1rem', listStyleType: 'decimal' }}>
+            <li>法令または公序良俗に違反する行為</li>
+            <li>本サービスの運営を妨害する行為（例：過度なリクエスト送信、サーバーへの不正アクセス）</li>
+            <li>本サービスの改変、逆コンパイル、リバースエンジニアリング</li>
+            <li>カードデータの不正取得・改ざん・再配布</li>
+            <li>他のユーザーや第三者の権利を侵害する行為（著作権・商標権・プライバシー権等）</li>
+          </ol>
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>第5条（知的財産権）</p>
+          <ol style={{ paddingLeft: '1rem', listStyleType: 'decimal' }}>
+            <li>本サービスに関する全ての著作権・商標権・その他知的財産権は、運営者または正当な権利者に帰属します。</li>
+            <li>ユーザーは、カード画像・テキスト等のコンテンツを 個人的な閲覧・楽しみ以外の目的（商業利用・再配布等）で使用してはなりません。</li>
+          </ol>
+          <p style={{ marginBottom: '0.5rem' }}>5.2 肖像権・名称・ロゴ等に関する特別条項</p>
+          <ol style={{ paddingLeft: '1rem', listStyleType: 'decimal' }}>
+            <li>本サービスで配布するデジタルカードに使用されているの写真・映像・ロゴ・チーム名 等の肖像権・名称権・商標権は、すべて該当球団またはその権利者に帰属します。</li>
+            <li>運営者は、これらの素材を 「個人的な趣味として撮影・編集したもの」 に限り、非営利・非商用 の範囲でのみ利用しています。</li>
+            <li>本サービスは、権利侵害を意図せず、かつ実質的に行っていない ことを表明します。万が一、権利者からの正式な申し立てがあった場合は、速やかに該当カードの配布を停止し、必要な対応を行います。</li>
+          </ol>
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>第6条（免責事項）</p>
+          <ol style={{ paddingLeft: '1rem', listStyleType: 'decimal' }}>
+            <li>本サービスは 現状有姿（AS IS） で提供され、運営者は機能・性能・安全性について一切保証しません。</li>
+            <li>運営者は、以下について一切の責任を負いません。
+              <ol>
+                <li>サービスの中断・停止、データ消失、通信障害、バグ等による損害</li>
+                <li>ユーザーがカード取得結果に不満を持ったことによる精神的・金銭的損害</li>
+                <li>第三者からのクレームや訴訟に起因する損害</li>
+              </ol>
+            </li>
+          </ol>
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>第7条（サービスの変更・終了）</p>
+          <ol style={{ paddingLeft: '1rem', listStyleType: 'decimal' }}>
+            <li>運営者は、予告なく本サービスの機能追加・変更・削除、または本サービス自体の提供停止・終了を行うことがあります。</li>
+            <li>サービス終了時において、ユーザーが取得したカードデータの保存義務は運営者にはありません。</li>
+          </ol>
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>第8条（個人情報の取扱い）</p>
+          <ol style={{ paddingLeft: '1rem', listStyleType: 'decimal' }}>
+            <li>本サービスは 個人情報を収集しません。ただし、サーバーログ等の技術的情報は、サービス維持・改善のために最低限保存される場合があります。</li>
+          </ol>
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>第9条（準拠法・裁判管轄）</p>
+          <ol style={{ paddingLeft: '1rem', listStyleType: 'decimal' }}>
+            <li>本規約及び本サービスの利用に関しては、日本国の法令を準拠法とします。</li>
+            <li>本サービスに関して生じた紛争については、東京地方裁判所を第一審の専属的合意管轄裁判所とします。</li>
+          </ol>
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>第10条（規約の変更）</p>
+          <ol style={{ paddingLeft: '1rem', listStyleType: 'decimal' }}>
+            <li>運営者は、必要に応じて本規約を随時変更できるものとします。変更後の規約は本ページに掲載された時点で効力を生じます。</li>
+          </ol>
+          <p style={{ textAlign: 'right', marginTop: '2rem', fontSize: '0.8rem', color: '#94a3b8' }}>
+            2025年12月25日 制定
+          </p>
+        </div>
+        <div style={{ marginTop: '1.5rem' }}>
+          <button onClick={onClose} style={{ width: '100%', padding: '0.75rem', background: '#275b91', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>閉じる</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MenuScreen: React.FC = () => {
+  const { resetData } = useGame();
+  const navigate = useNavigate();
+  const [showTerms, setShowTerms] = useState(false);
+
+  return (
+    <div style={{ padding: '1rem' }}>
+      <h2 style={{ marginBottom: '1.5rem', fontSize: '1.5rem', borderLeft: '4px solid #275b91', paddingLeft: '0.5rem', color: '#1e293b' }}>メニュー</h2>
+
+      <div onClick={() => navigate('/news')} style={styles.menuItem}>
+        <span>📣 お知らせ</span>
+      </div>
+
+      <div onClick={() => navigate('/contact')} style={styles.menuItem}>
+        <span>✉️ お問い合わせ・運営者情報</span>
+      </div>
+
+      <div onClick={() => setShowTerms(true)} style={styles.menuItem}>
+        <span>📜 利用規約</span>
+      </div>
+
+      <div style={{ height: 20 }} />
+
+      <div onClick={resetData} style={{ ...styles.menuItem, border: '1px solid #ef4444', color: '#fca5a5' }}>
+        <span>🗑️ データの初期化</span>
+      </div>
+      <p style={{ fontSize: '0.7rem', color: '#64748b', textAlign: 'center', marginTop: '0.5rem' }}>
+        データを初期化すると、獲得したカードやクレジットは全て削除されます。
+      </p>
+
+      <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
+    </div>
+  );
+};
+
+const EditProfileModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const { state, updateProfile } = useGame();
+  const [name, setName] = useState(state.userName);
+
+  const handleSave = () => {
+    updateProfile(name);
+    onClose();
+  };
+
+  return (
+    <div style={styles.modalOverlay} onClick={onClose}>
+      <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <h3 style={{ color: '#0f172a', marginBottom: '1.5rem', textAlign: 'center' }}>プロフィール編集</h3>
+
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', color: '#64748b', fontSize: '0.8rem', marginBottom: '0.5rem' }}>ユーザー名 (最大12文字・英数字のみ)</label>
+          <input
+            value={name}
+            onChange={e => {
+              const val = e.target.value;
+              // Allow alphanumeric AND spaces
+              if (/^[a-zA-Z0-9 ]*$/.test(val)) {
+                setName(val.slice(0, 12));
+              }
+            }}
+            maxLength={12}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: 8,
+              color: '#0f172a',
+              fontSize: '1rem',
+              boxSizing: 'border-box',
+              outline: 'none'
+            }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '0.75rem', background: 'transparent', border: '1px solid #94a3b8', color: '#64748b', borderRadius: 8, cursor: 'pointer' }}>キャンセル</button>
+          <button onClick={handleSave} style={{ flex: 1, padding: '0.75rem', background: '#275b91', border: 'none', color: 'white', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>保存</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ProfileCardSelectionModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const { updateProfileCard, getFormattedInventory } = useGame();
+  const inventoryItems = getFormattedInventory();
+
+  // Sort by rarity by default for better UX
+  const sortedItems = [...inventoryItems].sort((a, b) => {
+    const rarityOrder: Record<string, number> = { UR: 4, SR: 3, R: 2, N: 1 };
+    return rarityOrder[b.card.rarity] - rarityOrder[a.card.rarity];
+  });
+
+  return (
+    <div style={styles.modalOverlay} onClick={onClose}>
+      <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <h3 style={{ color: '#0f172a', marginBottom: '1.5rem', textAlign: 'center' }}>プロフィールカード選択</h3>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+          gap: '0.75rem',
+          maxHeight: '400px',
+          overflowY: 'auto',
+          padding: '0.5rem',
+          background: '#f8fafc',
+          borderRadius: '8px'
+        }}>
+          {sortedItems.map((item, i) => (
+            <div key={i} style={{ cursor: 'pointer' }} onClick={() => { updateProfileCard(item.card.id); onClose(); }}>
+              <CardView
+                card={item.card}
+                size="sm"
+              />
+            </div>
+          ))}
+          {sortedItems.length === 0 && (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#64748b', padding: '2rem 0' }}>
+              カードを持っていません
+            </div>
+          )}
+        </div>
+        <button onClick={onClose} style={{
+          width: '100%', padding: '0.75rem', background: 'transparent',
+          border: '1px solid #94a3b8', color: '#64748b', borderRadius: 8,
+          cursor: 'pointer', marginTop: '1.5rem'
+        }}>閉じる</button>
+      </div>
+    </div>
+  );
+};
+
+const MyPageScreen: React.FC = () => {
+  const { getFormattedInventory } = useGame();
+  const inventoryItems = getFormattedInventory();
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [sortType, setSortType] = useState<'rarity' | 'character' | 'date'>('rarity');
+
+  // Sorting Logic
+  const sortedItems = [...inventoryItems].sort((a, b) => {
+    if (sortType === 'rarity') {
+      const diff = b.card.rarity - a.card.rarity;
+      if (diff !== 0) return diff;
+      return a.card.id.localeCompare(b.card.id);
+    } else if (sortType === 'character') {
+      // Character Name (Japanese) sort using localeCompare
+      return a.card.name.localeCompare(b.card.name, 'ja');
+    } else {
+      // Date sort (Ascending)
+      return a.card.description.localeCompare(b.card.description, 'ja');
+    }
+  });
+
+  return (
+    <div style={{ padding: '1rem' }}>
+      <ProfileSection marginBottom="2rem" showHowToPlay={false} />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h2 style={{ fontSize: '1.2rem', borderLeft: '4px solid #275b91', paddingLeft: '0.5rem', margin: 0, color: '#1e293b' }}>コレクション</h2>
+
+        {/* Sort Tabs */}
+        <div style={{ display: 'flex', background: 'white', borderRadius: 8, padding: 4, gap: 4, border: '1px solid #e2e8f0' }}>
+          <button
+            onClick={() => setSortType('rarity')}
+            style={{
+              background: sortType === 'rarity' ? '#275b91' : 'transparent',
+              color: sortType === 'rarity' ? 'white' : '#64748b',
+              border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer'
+            }}
+          >
+            レア度
+          </button>
+          <button
+            onClick={() => setSortType('character')}
+            style={{
+              background: sortType === 'character' ? '#275b91' : 'transparent',
+              color: sortType === 'character' ? 'white' : '#64748b',
+              border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer'
+            }}
+          >
+            メンバー
+          </button>
+          <button
+            onClick={() => setSortType('date')}
+            style={{
+              background: sortType === 'date' ? '#275b91' : 'transparent',
+              color: sortType === 'date' ? 'white' : '#64748b',
+              border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer'
+            }}
+          >
+            日付
+          </button>
+        </div>
+      </div>
+
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px',
+      }}>
+        {sortedItems.map((item, i) => (
+          <CardView key={i} card={item.card} count={item.count} size="sm" onClick={() => setSelectedCard(item.card)} />
+        ))}
+      </div>
+      {sortedItems.length === 0 && (
+        <div style={{ width: '100%', textAlign: 'center', padding: '3rem 0', color: '#64748b' }}>
+          カードを持っていません。<br />スカウトを引いてみましょう！
+        </div>
+      )}
+
+      {selectedCard && (
+        <CardDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />
+      )}
+    </div>
+  );
+};
+
+// --- APP ---
+function App() {
+  return (
+    <GameProvider>
+      <BrowserRouter>
+        <div style={styles.appContainer}>
+          <Header />
+          <div style={styles.content}>
+            <Routes>
+              <Route path="/" element={<HomeScreen />} />
+              <Route path="/scout" element={<ScoutScreen />} />
+              <Route path="/collection" element={<MyPageScreen />} />
+              <Route path="/menu" element={<MenuScreen />} />
+              <Route path="/news" element={<NewsScreen />} />
+              <Route path="/contact" element={<ContactScreen />} />
+            </Routes>
+          </div>
+          <BottomNav />
+        </div>
+      </BrowserRouter>
+    </GameProvider>
+  );
+}
+
+export default App;

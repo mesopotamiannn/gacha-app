@@ -1,0 +1,104 @@
+:root {
+  /* Colors */
+  --color-bg: #0f172a; /* Slate 900 */
+  --color-surface: #1e293b; /* Slate 800 */
+  --color-surface-hover: #334155; /* Slate 700 */
+  --color-primary: #f59e0b; /* Amber 500 */
+  --color-primary-glow: #fbbf24; /* Amber 400 */
+  --color-accent: #06b6d4; /* Cyan 500 */
+  --color-text: #f8fafc; /* Slate 50 */
+  --color-text-dim: #94a3b8; /* Slate 400 */
+  
+  /* Rarity Colors */
+  --color-n: #94a3b8; /* Slate 400 */
+  --color-r: #3b82f6; /* Blue 500 */
+  --color-sr: #a855f7; /* Purple 500 */
+  --color-ur: #eab308; /* Yellow 500 */
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+
+  /* Typography */
+  --font-base: 'Inter', system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-base);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+/* Utilities */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: 9999px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.btn:hover {
+  background: var(--color-surface-hover);
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #0f172a;
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-glow);
+  box-shadow: 0 0 15px var(--color-primary-glow);
+}
+
+/* Animations */
+@keyframes pulses {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shine {
+  0% { background-position: -200%; }
+  100% { background-position: 200%; }
+}
